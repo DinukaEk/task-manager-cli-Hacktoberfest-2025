@@ -26,10 +26,10 @@ def get_valid_choice():
     while True:
         choice = input(f"\n{Fore.YELLOW}Enter your choice: {Style.RESET_ALL}").strip()
         
-        if choice in ['1', '2', '3', '4', '5']:
+        if choice in ['1', '2', '3', '4', '5', '6', '7']:
             return choice
         else:
-            print(f"{Fore.RED}✗ Invalid choice! Please enter a number between 1 and 5.{Style.RESET_ALL}")
+            print(f"{Fore.RED}✗ Invalid choice! Please enter a number between 1 and 7.{Style.RESET_ALL}")
 
 def get_valid_task_id(prompt="Enter task ID: "):
     """Get and validate task ID from user"""
@@ -111,9 +111,8 @@ def add_task(title, priority="medium"):
     priority_symbol = get_priority_symbol(priority)
     print(f"{Fore.GREEN}✓ Task added: {title} {priority_symbol} [{priority.upper()}]{Style.RESET_ALL}")
 
-def list_tasks():
-    """List all tasks sorted by priority"""
-    tasks = load_tasks()
+def display_tasks(tasks, filter_type="all"):
+    """Display tasks with optional filtering"""
     if not tasks:
         print(f"{Fore.YELLOW}No tasks found.{Style.RESET_ALL}")
         return
@@ -123,10 +122,33 @@ def list_tasks():
         if "priority" not in task:
             task["priority"] = "medium"
     
-    # Sort tasks by priority (high -> medium -> low), then by ID
-    sorted_tasks = sorted(tasks, key=lambda x: (get_priority_order(x.get("priority", "medium")), x["id"]))
+    # Filter tasks based on filter_type
+    if filter_type == "completed":
+        filtered_tasks = [task for task in tasks if task["completed"]]
+        header = "COMPLETED TASKS"
+    elif filter_type == "pending":
+        filtered_tasks = [task for task in tasks if not task["completed"]]
+        header = "PENDING TASKS"
+    else:  # all
+        filtered_tasks = tasks
+        header = "ALL TASKS"
     
-    print(f"\n{Fore.CYAN}{'='*60}{Style.RESET_ALL}")
+    if not filtered_tasks:
+        if filter_type == "completed":
+            print(f"{Fore.YELLOW}No completed tasks found.{Style.RESET_ALL}")
+        elif filter_type == "pending":
+            print(f"{Fore.YELLOW}No pending tasks found.{Style.RESET_ALL}")
+        return
+    
+    # Sort tasks by priority (high -> medium -> low), then by ID
+    sorted_tasks = sorted(filtered_tasks, key=lambda x: (get_priority_order(x.get("priority", "medium")), x["id"]))
+    
+    # Display header with count
+    count = len(sorted_tasks)
+    print(f"\n{Fore.MAGENTA}{'='*60}{Style.RESET_ALL}")
+    print(f"{Fore.MAGENTA}{header} ({count} task{'s' if count != 1 else ''}){Style.RESET_ALL}")
+    print(f"{Fore.MAGENTA}{'='*60}{Style.RESET_ALL}")
+    
     for task in sorted_tasks:
         priority = task.get("priority", "medium")
         priority_symbol = get_priority_symbol(priority)
@@ -141,7 +163,22 @@ def list_tasks():
             title = f"{Fore.YELLOW}{task['title']}{Style.RESET_ALL}"
         
         print(f"{Fore.CYAN}{task['id']}.{Style.RESET_ALL} [{status}] {title} {priority_symbol} {Fore.CYAN}[{priority.upper()}]{Style.RESET_ALL}")
-    print(f"{Fore.CYAN}{'='*60}{Style.RESET_ALL}\n")
+    print(f"{Fore.MAGENTA}{'='*60}{Style.RESET_ALL}\n")
+
+def list_tasks():
+    """List all tasks sorted by priority"""
+    tasks = load_tasks()
+    display_tasks(tasks, "all")
+
+def list_completed_tasks():
+    """List only completed tasks"""
+    tasks = load_tasks()
+    display_tasks(tasks, "completed")
+
+def list_pending_tasks():
+    """List only pending tasks"""
+    tasks = load_tasks()
+    display_tasks(tasks, "pending")
 
 def complete_task(task_id):
     """Mark a task as complete"""
@@ -193,10 +230,12 @@ def main():
     """Main function"""
     print(f"\n{Fore.MAGENTA}{Back.WHITE} === Task Manager CLI === {Style.RESET_ALL}\n")
     print(f"{Fore.CYAN}1.{Style.RESET_ALL} Add task")
-    print(f"{Fore.CYAN}2.{Style.RESET_ALL} List tasks")
-    print(f"{Fore.CYAN}3.{Style.RESET_ALL} Complete task")
-    print(f"{Fore.CYAN}4.{Style.RESET_ALL} Delete task")
-    print(f"{Fore.CYAN}5.{Style.RESET_ALL} Exit")
+    print(f"{Fore.CYAN}2.{Style.RESET_ALL} List all tasks")
+    print(f"{Fore.CYAN}3.{Style.RESET_ALL} List completed tasks")
+    print(f"{Fore.CYAN}4.{Style.RESET_ALL} List pending tasks")
+    print(f"{Fore.CYAN}5.{Style.RESET_ALL} Complete task")
+    print(f"{Fore.CYAN}6.{Style.RESET_ALL} Delete task")
+    print(f"{Fore.CYAN}7.{Style.RESET_ALL} Exit")
     
     choice = get_valid_choice()
     
@@ -207,12 +246,16 @@ def main():
     elif choice == "2":
         list_tasks()
     elif choice == "3":
+        list_completed_tasks()
+    elif choice == "4":
+        list_pending_tasks()
+    elif choice == "5":
         task_id = get_valid_task_id("Enter task ID to complete: ")
         complete_task(task_id)
-    elif choice == "4":
+    elif choice == "6":
         task_id = get_valid_task_id("Enter task ID to delete: ")
         delete_task(task_id)
-    elif choice == "5":
+    elif choice == "7":
         print(f"{Fore.GREEN}Goodbye!{Style.RESET_ALL}")
         return
 
