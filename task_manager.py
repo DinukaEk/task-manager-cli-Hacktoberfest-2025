@@ -26,10 +26,10 @@ def get_valid_choice():
     while True:
         choice = input(f"\n{Fore.YELLOW}Enter your choice: {Style.RESET_ALL}").strip()
         
-        if choice in ['1', '2', '3', '4', '5', '6', '7', '8']:
+        if choice in ['1', '2', '3', '4', '5', '6', '7', '8', '9']:
             return choice
         else:
-            print(f"{Fore.RED}✗ Invalid choice! Please enter a number between 1 and 8.{Style.RESET_ALL}")
+            print(f"{Fore.RED}✗ Invalid choice! Please enter a number between 1 and 9.{Style.RESET_ALL}")
 
 def get_valid_task_id(prompt="Enter task ID: "):
     """Get and validate task ID from user"""
@@ -65,6 +65,16 @@ def get_task_title():
             continue
         
         return title
+
+def get_search_query():
+    """Get search query from user"""
+    query = input(f"{Fore.YELLOW}Enter search term: {Style.RESET_ALL}").strip()
+    
+    if not query:
+        print(f"{Fore.RED}✗ Search term cannot be empty.{Style.RESET_ALL}")
+        return None
+    
+    return query
 
 def get_priority():
     """Get and validate task priority from user"""
@@ -111,7 +121,7 @@ def add_task(title, priority="medium"):
     priority_symbol = get_priority_symbol(priority)
     print(f"{Fore.GREEN}✓ Task added: {title} {priority_symbol} [{priority.upper()}]{Style.RESET_ALL}")
 
-def display_tasks(tasks, filter_type="all"):
+def display_tasks(tasks, filter_type="all", header_override=None):
     """Display tasks with optional filtering"""
     if not tasks:
         print(f"{Fore.YELLOW}No tasks found.{Style.RESET_ALL}")
@@ -132,6 +142,10 @@ def display_tasks(tasks, filter_type="all"):
     else:  # all
         filtered_tasks = tasks
         header = "ALL TASKS"
+    
+    # Override header if provided (for search results)
+    if header_override:
+        header = header_override
     
     if not filtered_tasks:
         if filter_type == "completed":
@@ -179,6 +193,31 @@ def list_pending_tasks():
     """List only pending tasks"""
     tasks = load_tasks()
     display_tasks(tasks, "pending")
+
+def search_tasks():
+    """Search for tasks by keyword"""
+    query = get_search_query()
+    
+    if not query:
+        return
+    
+    tasks = load_tasks()
+    
+    if not tasks:
+        print(f"{Fore.YELLOW}No tasks found.{Style.RESET_ALL}")
+        return
+    
+    # Search for tasks containing the query (case-insensitive)
+    query_lower = query.lower()
+    matching_tasks = [task for task in tasks if query_lower in task["title"].lower()]
+    
+    if not matching_tasks:
+        print(f"{Fore.YELLOW}No tasks found matching '{query}'.{Style.RESET_ALL}")
+        return
+    
+    # Display results with custom header
+    header = f"SEARCH RESULTS FOR '{query}'"
+    display_tasks(matching_tasks, "all", header_override=header)
 
 def complete_task(task_id):
     """Mark a task as complete"""
@@ -287,10 +326,11 @@ def main():
     print(f"{Fore.CYAN}2.{Style.RESET_ALL} List all tasks")
     print(f"{Fore.CYAN}3.{Style.RESET_ALL} List completed tasks")
     print(f"{Fore.CYAN}4.{Style.RESET_ALL} List pending tasks")
-    print(f"{Fore.CYAN}5.{Style.RESET_ALL} Complete task")
-    print(f"{Fore.CYAN}6.{Style.RESET_ALL} Edit task")
-    print(f"{Fore.CYAN}7.{Style.RESET_ALL} Delete task")
-    print(f"{Fore.CYAN}8.{Style.RESET_ALL} Exit")
+    print(f"{Fore.CYAN}5.{Style.RESET_ALL} Search tasks")
+    print(f"{Fore.CYAN}6.{Style.RESET_ALL} Complete task")
+    print(f"{Fore.CYAN}7.{Style.RESET_ALL} Edit task")
+    print(f"{Fore.CYAN}8.{Style.RESET_ALL} Delete task")
+    print(f"{Fore.CYAN}9.{Style.RESET_ALL} Exit")
     
     choice = get_valid_choice()
     
@@ -305,15 +345,17 @@ def main():
     elif choice == "4":
         list_pending_tasks()
     elif choice == "5":
+        search_tasks()
+    elif choice == "6":
         task_id = get_valid_task_id("Enter task ID to complete: ")
         complete_task(task_id)
-    elif choice == "6":
+    elif choice == "7":
         task_id = get_valid_task_id("Enter task ID to edit: ")
         edit_task(task_id)
-    elif choice == "7":
+    elif choice == "8":
         task_id = get_valid_task_id("Enter task ID to delete: ")
         delete_task(task_id)
-    elif choice == "8":
+    elif choice == "9":
         print(f"{Fore.GREEN}Goodbye!{Style.RESET_ALL}")
         return
 
