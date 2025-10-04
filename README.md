@@ -8,9 +8,13 @@ Task Manager CLI is a lightweight tool to help you manage your daily tasks right
 
 ## ✨ Current Features
 
-- ✅ Add new tasks
-- ✅ List all tasks
+- ✅ Add new tasks with priority levels
+- ✅ List all tasks (sorted by priority)
 - ✅ Mark tasks as complete
+- ✅ Delete tasks
+- ✅ Priority system (High, Medium, Low)
+- ✅ Color-coded interface
+- ✅ Input validation
 - ✅ Persistent storage with JSON
 
 ## 🛠️ Installation
@@ -39,10 +43,18 @@ python task_manager.py
 ```
 
 Choose from available options:
-1. Add a new task
-2. View all tasks
+
+1. Add a new task - You'll be prompted for title and priority (High/Medium/Low)
+2. View all tasks - Tasks are automatically sorted by priority
 3. Mark a task as complete
-4. Exit
+4. Delete a task
+5. Exit
+
+Priority Levels
+
+- 🔴 High: Critical or urgent tasks
+- 🟡 Medium: Normal priority (default)
+- 🟢 Low: Less urgent tasks
 
 ## 🤝 Contributing
 
