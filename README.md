@@ -12,6 +12,7 @@ Task Manager CLI is a lightweight tool to help you manage your daily tasks right
 - ✅ List all tasks (sorted by priority)
 - ✅ Filter tasks by status (completed/pending)
 - ✅ Mark tasks as complete
+- ✅ Edit task title and priority
 - ✅ Delete tasks
 - ✅ Priority system (High, Medium, Low)
 - ✅ Color-coded interface
@@ -50,8 +51,16 @@ Choose from available options:
 3. List completed tasks - View only completed tasks
 4. List pending tasks - View only pending/incomplete tasks
 5. Mark a task as complete
-6. Delete a task
-7. Exit
+6. Edit a task - Update task title and/or priority
+7. Delete a task
+8. Exit
+
+
+Editing Tasks
+
+- When editing, you can update the title, priority, or both
+- Press Enter to keep the current value unchanged
+- Invalid inputs are rejected with helpful error messages
 
 
 Filtering Options
@@ -81,17 +90,13 @@ Check out issues labeled with `good first issue` and `hacktoberfest` to get star
 ## 📋 Roadmap
 
 Features we'd love to add:
-- Delete tasks
-- Edit existing tasks
-- Add priorities (high, medium, low)
 - Add due dates
-- Filter tasks (completed/pending)
 - Search functionality
 - Categories/tags
 - Better error handling
 - Unit tests
-- Color-coded output
 - Export to CSV/PDF
+- Task statistics dashboard
 
 ## 📜 License
 
