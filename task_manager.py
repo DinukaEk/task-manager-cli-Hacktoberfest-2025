@@ -1,6 +1,10 @@
 import json
 import os
 from datetime import datetime
+from colorama import Fore, Back, Style, init
+
+# Initialize colorama for cross-platform color support
+init(autoreset=True)
 
 TASKS_FILE = "tasks.json"
 
@@ -27,18 +31,28 @@ def add_task(title):
     }
     tasks.append(task)
     save_tasks(tasks)
-    print(f"Task added: {title}")
+    print(f"{Fore.GREEN}✓ Task added: {title}{Style.RESET_ALL}")
 
 def list_tasks():
     """List all tasks"""
     tasks = load_tasks()
     if not tasks:
-        print("No tasks found.")
+        print(f"{Fore.YELLOW}No tasks found.{Style.RESET_ALL}")
         return
     
+    print(f"\n{Fore.CYAN}{'='*50}{Style.RESET_ALL}")
     for task in tasks:
-        status = "✓" if task["completed"] else "✗"
-        print(f"{task['id']}. [{status}] {task['title']}")
+        if task["completed"]:
+            # Completed tasks in green
+            status = f"{Fore.GREEN}✓{Style.RESET_ALL}"
+            title = f"{Fore.GREEN}{task['title']}{Style.RESET_ALL}"
+        else:
+            # Pending tasks in yellow
+            status = f"{Fore.YELLOW}✗{Style.RESET_ALL}"
+            title = f"{Fore.YELLOW}{task['title']}{Style.RESET_ALL}"
+        
+        print(f"{Fore.CYAN}{task['id']}.{Style.RESET_ALL} [{status}] {title}")
+    print(f"{Fore.CYAN}{'='*50}{Style.RESET_ALL}\n")
 
 def complete_task(task_id):
     """Mark a task as complete"""
@@ -47,9 +61,9 @@ def complete_task(task_id):
         if task["id"] == task_id:
             task["completed"] = True
             save_tasks(tasks)
-            print(f"Task {task_id} marked as complete!")
+            print(f"{Fore.GREEN}✓ Task {task_id} marked as complete!{Style.RESET_ALL}")
             return
-    print(f"Task {task_id} not found.")
+    print(f"{Fore.RED}✗ Task {task_id} not found.{Style.RESET_ALL}")
 
 def delete_task(task_id):
     """Delete a task by ID"""
@@ -70,37 +84,37 @@ def delete_task(task_id):
             task["id"] = i + 1
         
         save_tasks(tasks)
-        print(f"Task deleted: {deleted_title}")
+        print(f"{Fore.GREEN}✓ Task deleted: {deleted_title}{Style.RESET_ALL}")
     else:
-        print(f"Task {task_id} not found.")
+        print(f"{Fore.RED}✗ Task {task_id} not found.{Style.RESET_ALL}")
 
 def main():
     """Main function"""
-    print("=== Task Manager CLI ===")
-    print("1. Add task")
-    print("2. List tasks")
-    print("3. Complete task")
-    print("4. Delete task")
-    print("5. Exit")
+    print(f"\n{Fore.MAGENTA}{Back.WHITE} === Task Manager CLI === {Style.RESET_ALL}\n")
+    print(f"{Fore.CYAN}1.{Style.RESET_ALL} Add task")
+    print(f"{Fore.CYAN}2.{Style.RESET_ALL} List tasks")
+    print(f"{Fore.CYAN}3.{Style.RESET_ALL} Complete task")
+    print(f"{Fore.CYAN}4.{Style.RESET_ALL} Delete task")
+    print(f"{Fore.CYAN}5.{Style.RESET_ALL} Exit")
     
-    choice = input("\nEnter your choice: ")
+    choice = input(f"\n{Fore.YELLOW}Enter your choice: {Style.RESET_ALL}")
     
     if choice == "1":
-        title = input("Enter task title: ")
+        title = input(f"{Fore.YELLOW}Enter task title: {Style.RESET_ALL}")
         add_task(title)
     elif choice == "2":
         list_tasks()
     elif choice == "3":
-        task_id = int(input("Enter task ID: "))
+        task_id = int(input(f"{Fore.YELLOW}Enter task ID: {Style.RESET_ALL}"))
         complete_task(task_id)
     elif choice == "4":
-        task_id = int(input("Enter task ID to delete: "))
+        task_id = int(input(f"{Fore.YELLOW}Enter task ID to delete: {Style.RESET_ALL}"))
         delete_task(task_id)
     elif choice == "5":
-        print("Goodbye!")
+        print(f"{Fore.GREEN}Goodbye!{Style.RESET_ALL}")
         return
     else:
-        print("Invalid choice!")
+        print(f"{Fore.RED}✗ Invalid choice!{Style.RESET_ALL}")
 
 if __name__ == "__main__":
     main()
