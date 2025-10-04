@@ -7,6 +7,7 @@ from colorama import Fore, Back, Style, init
 init(autoreset=True)
 
 TASKS_FILE = "tasks.json"
+VALID_PRIORITIES = ['high', 'medium', 'low']
 
 def load_tasks():
     """Load tasks from JSON file"""
@@ -65,28 +66,71 @@ def get_task_title():
         
         return title
 
-def add_task(title):
-    """Add a new task"""
+def get_priority():
+    """Get and validate task priority from user"""
+    print(f"{Fore.CYAN}Priority levels: High, Medium, Low{Style.RESET_ALL}")
+    
+    while True:
+        priority = input(f"{Fore.YELLOW}Enter priority (default: Medium): {Style.RESET_ALL}").strip().lower()
+        
+        # Default to medium if empty
+        if not priority:
+            return "medium"
+        
+        if priority in VALID_PRIORITIES:
+            return priority
+        else:
+            print(f"{Fore.RED}✗ Invalid priority! Please enter High, Medium, or Low.{Style.RESET_ALL}")
+
+def get_priority_symbol(priority):
+    """Get colored symbol for priority level"""
+    if priority == "high":
+        return f"{Fore.RED}🔴{Style.RESET_ALL}"
+    elif priority == "medium":
+        return f"{Fore.YELLOW}🟡{Style.RESET_ALL}"
+    else:  # low
+        return f"{Fore.GREEN}🟢{Style.RESET_ALL}"
+
+def get_priority_order(priority):
+    """Get numeric order for sorting priorities"""
+    priority_map = {"high": 1, "medium": 2, "low": 3}
+    return priority_map.get(priority, 2)
+
+def add_task(title, priority="medium"):
+    """Add a new task with priority"""
     tasks = load_tasks()
     task = {
         "id": len(tasks) + 1,
         "title": title,
+        "priority": priority,
         "completed": False,
         "created_at": datetime.now().isoformat()
     }
     tasks.append(task)
     save_tasks(tasks)
-    print(f"{Fore.GREEN}✓ Task added: {title}{Style.RESET_ALL}")
+    priority_symbol = get_priority_symbol(priority)
+    print(f"{Fore.GREEN}✓ Task added: {title} {priority_symbol} [{priority.upper()}]{Style.RESET_ALL}")
 
 def list_tasks():
-    """List all tasks"""
+    """List all tasks sorted by priority"""
     tasks = load_tasks()
     if not tasks:
         print(f"{Fore.YELLOW}No tasks found.{Style.RESET_ALL}")
         return
     
-    print(f"\n{Fore.CYAN}{'='*50}{Style.RESET_ALL}")
+    # Add priority field to old tasks that don't have it (backward compatibility)
     for task in tasks:
+        if "priority" not in task:
+            task["priority"] = "medium"
+    
+    # Sort tasks by priority (high -> medium -> low), then by ID
+    sorted_tasks = sorted(tasks, key=lambda x: (get_priority_order(x.get("priority", "medium")), x["id"]))
+    
+    print(f"\n{Fore.CYAN}{'='*60}{Style.RESET_ALL}")
+    for task in sorted_tasks:
+        priority = task.get("priority", "medium")
+        priority_symbol = get_priority_symbol(priority)
+        
         if task["completed"]:
             # Completed tasks in green
             status = f"{Fore.GREEN}✓{Style.RESET_ALL}"
@@ -96,8 +140,8 @@ def list_tasks():
             status = f"{Fore.YELLOW}✗{Style.RESET_ALL}"
             title = f"{Fore.YELLOW}{task['title']}{Style.RESET_ALL}"
         
-        print(f"{Fore.CYAN}{task['id']}.{Style.RESET_ALL} [{status}] {title}")
-    print(f"{Fore.CYAN}{'='*50}{Style.RESET_ALL}\n")
+        print(f"{Fore.CYAN}{task['id']}.{Style.RESET_ALL} [{status}] {title} {priority_symbol} {Fore.CYAN}[{priority.upper()}]{Style.RESET_ALL}")
+    print(f"{Fore.CYAN}{'='*60}{Style.RESET_ALL}\n")
 
 def complete_task(task_id):
     """Mark a task as complete"""
@@ -158,7 +202,8 @@ def main():
     
     if choice == "1":
         title = get_task_title()
-        add_task(title)
+        priority = get_priority()
+        add_task(title, priority)
     elif choice == "2":
         list_tasks()
     elif choice == "3":
