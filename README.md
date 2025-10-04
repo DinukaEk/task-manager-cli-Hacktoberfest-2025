@@ -21,7 +21,12 @@ git clone https://github.com/yourusername/task-manager-cli.git
 cd task-manager-cli
 ```
 
-2. Run the program:
+2. Install dependencies:
+```bash
+pip install -r requirements.txt
+```
+
+3. Run the program:
 ```bash
 python task_manager.py
 ```
