@@ -51,37 +51,13 @@ def complete_task(task_id):
             return
     print(f"Task {task_id} not found.")
 
-def delete_task(task_id):
-    """Delete a task by ID"""
-    tasks = load_tasks()
-    
-    # Find and remove the task
-    task_found = False
-    for i, task in enumerate(tasks):
-        if task["id"] == task_id:
-            deleted_title = task["title"]
-            tasks.pop(i)
-            task_found = True
-            break
-    
-    if task_found:
-        # Re-assign IDs to maintain sequential order
-        for i, task in enumerate(tasks):
-            task["id"] = i + 1
-        
-        save_tasks(tasks)
-        print(f"Task deleted: {deleted_title}")
-    else:
-        print(f"Task {task_id} not found.")
-
 def main():
     """Main function"""
     print("=== Task Manager CLI ===")
     print("1. Add task")
     print("2. List tasks")
     print("3. Complete task")
-    print("4. Delete task")
-    print("5. Exit")
+    print("4. Exit")
     
     choice = input("\nEnter your choice: ")
     
@@ -94,9 +70,6 @@ def main():
         task_id = int(input("Enter task ID: "))
         complete_task(task_id)
     elif choice == "4":
-        task_id = int(input("Enter task ID to delete: "))
-        delete_task(task_id)
-    elif choice == "5":
         print("Goodbye!")
         return
     else:
