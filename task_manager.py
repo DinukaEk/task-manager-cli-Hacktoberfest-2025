@@ -26,10 +26,10 @@ def get_valid_choice():
     while True:
         choice = input(f"\n{Fore.YELLOW}Enter your choice: {Style.RESET_ALL}").strip()
         
-        if choice in ['1', '2', '3', '4', '5', '6', '7']:
+        if choice in ['1', '2', '3', '4', '5', '6', '7', '8']:
             return choice
         else:
-            print(f"{Fore.RED}✗ Invalid choice! Please enter a number between 1 and 7.{Style.RESET_ALL}")
+            print(f"{Fore.RED}✗ Invalid choice! Please enter a number between 1 and 8.{Style.RESET_ALL}")
 
 def get_valid_task_id(prompt="Enter task ID: "):
     """Get and validate task ID from user"""
@@ -199,6 +199,60 @@ def complete_task(task_id):
             return
     print(f"{Fore.RED}✗ Task {task_id} not found.{Style.RESET_ALL}")
 
+def edit_task(task_id):
+    """Edit a task's title and priority"""
+    tasks = load_tasks()
+    
+    if not tasks:
+        print(f"{Fore.YELLOW}No tasks available to edit.{Style.RESET_ALL}")
+        return
+    
+    for task in tasks:
+        if task["id"] == task_id:
+            # Display current task details
+            priority = task.get("priority", "medium")
+            priority_symbol = get_priority_symbol(priority)
+            print(f"\n{Fore.CYAN}Current task:{Style.RESET_ALL}")
+            print(f"  Title: {task['title']}")
+            print(f"  Priority: {priority_symbol} [{priority.upper()}]")
+            print()
+            
+            # Get new title
+            print(f"{Fore.CYAN}Enter new title (or press Enter to keep current):{Style.RESET_ALL}")
+            new_title = input(f"{Fore.YELLOW}New title: {Style.RESET_ALL}").strip()
+            
+            if new_title:
+                if len(new_title) > 100:
+                    print(f"{Fore.RED}✗ Title is too long (max 100 characters). Task not updated.{Style.RESET_ALL}")
+                    return
+                task["title"] = new_title
+            
+            # Get new priority
+            print(f"\n{Fore.CYAN}Enter new priority (or press Enter to keep current):{Style.RESET_ALL}")
+            print(f"{Fore.CYAN}Priority levels: High, Medium, Low{Style.RESET_ALL}")
+            new_priority = input(f"{Fore.YELLOW}New priority: {Style.RESET_ALL}").strip().lower()
+            
+            if new_priority:
+                if new_priority in VALID_PRIORITIES:
+                    task["priority"] = new_priority
+                else:
+                    print(f"{Fore.RED}✗ Invalid priority. Keeping current priority.{Style.RESET_ALL}")
+            
+            # Add updated timestamp
+            task["updated_at"] = datetime.now().isoformat()
+            
+            save_tasks(tasks)
+            
+            # Show updated task
+            updated_priority = task.get("priority", "medium")
+            updated_symbol = get_priority_symbol(updated_priority)
+            print(f"\n{Fore.GREEN}✓ Task {task_id} updated successfully!{Style.RESET_ALL}")
+            print(f"  New title: {task['title']}")
+            print(f"  New priority: {updated_symbol} [{updated_priority.upper()}]")
+            return
+    
+    print(f"{Fore.RED}✗ Task {task_id} not found.{Style.RESET_ALL}")
+
 def delete_task(task_id):
     """Delete a task by ID"""
     tasks = load_tasks()
@@ -234,8 +288,9 @@ def main():
     print(f"{Fore.CYAN}3.{Style.RESET_ALL} List completed tasks")
     print(f"{Fore.CYAN}4.{Style.RESET_ALL} List pending tasks")
     print(f"{Fore.CYAN}5.{Style.RESET_ALL} Complete task")
-    print(f"{Fore.CYAN}6.{Style.RESET_ALL} Delete task")
-    print(f"{Fore.CYAN}7.{Style.RESET_ALL} Exit")
+    print(f"{Fore.CYAN}6.{Style.RESET_ALL} Edit task")
+    print(f"{Fore.CYAN}7.{Style.RESET_ALL} Delete task")
+    print(f"{Fore.CYAN}8.{Style.RESET_ALL} Exit")
     
     choice = get_valid_choice()
     
@@ -253,9 +308,12 @@ def main():
         task_id = get_valid_task_id("Enter task ID to complete: ")
         complete_task(task_id)
     elif choice == "6":
+        task_id = get_valid_task_id("Enter task ID to edit: ")
+        edit_task(task_id)
+    elif choice == "7":
         task_id = get_valid_task_id("Enter task ID to delete: ")
         delete_task(task_id)
-    elif choice == "7":
+    elif choice == "8":
         print(f"{Fore.GREEN}Goodbye!{Style.RESET_ALL}")
         return
 
