@@ -12,6 +12,16 @@ from bulk_operations import (
     bulk_add_tag
 )
 
+from templates import (
+    create_template,
+    list_templates,
+    get_template,
+    delete_template,
+    create_task_from_template,
+    export_template,
+    import_template
+)
+
 
 # Initialize colorama for cross-platform color support
 init(autoreset=True)
@@ -36,10 +46,10 @@ def get_valid_choice():
     while True:
         choice = input(f"\n{Fore.YELLOW}Enter your choice: {Style.RESET_ALL}").strip()
         
-        if choice in ['1', '2', '3', '4', '5', '6', '7', '8', '9', '10', '11', '12', '13', '14', '15']:
+        if choice in ['1', '2', '3', '4', '5', '6', '7', '8', '9', '10', '11', '12', '13', '14', '15', '16']:
             return choice
         else:
-            print(f"{Fore.RED}✗ Invalid choice! Please enter a number between 1 and 15.{Style.RESET_ALL}")
+            print(f"{Fore.RED}✗ Invalid choice! Please enter a number between 1 and 16.{Style.RESET_ALL}")
 
 def get_valid_task_id(prompt="Enter task ID: "):
     """Get and validate task ID from user"""
@@ -872,6 +882,138 @@ def bulk_operations_menu():
     else:
         print(f"{Fore.RED}✗ Invalid choice.{Style.RESET_ALL}")
 
+def templates_menu():
+    """Show templates menu"""
+    print(f"\n{Fore.CYAN}{'='*50}{Style.RESET_ALL}")
+    print(f"{Fore.CYAN}TEMPLATES MENU{Style.RESET_ALL}")
+    print(f"{Fore.CYAN}{'='*50}{Style.RESET_ALL}")
+    print(f"{Fore.YELLOW}1.{Style.RESET_ALL} Create new template")
+    print(f"{Fore.YELLOW}2.{Style.RESET_ALL} List all templates")
+    print(f"{Fore.YELLOW}3.{Style.RESET_ALL} Create task from template")
+    print(f"{Fore.YELLOW}4.{Style.RESET_ALL} Delete template")
+    print(f"{Fore.YELLOW}5.{Style.RESET_ALL} Export template to file")
+    print(f"{Fore.YELLOW}6.{Style.RESET_ALL} Import template from file")
+    print(f"{Fore.YELLOW}7.{Style.RESET_ALL} Back to main menu")
+    
+    choice = input(f"\n{Fore.YELLOW}Choose option: {Style.RESET_ALL}").strip()
+    
+    if choice == "1":
+        # Create new template
+        name = input(f"{Fore.YELLOW}Template name: {Style.RESET_ALL}").strip()
+        
+        if not name:
+            print(f"{Fore.RED}✗ Template name cannot be empty!{Style.RESET_ALL}")
+            return
+        
+        title = input(f"{Fore.YELLOW}Task title template: {Style.RESET_ALL}").strip()
+        
+        if not title:
+            print(f"{Fore.RED}✗ Title cannot be empty!{Style.RESET_ALL}")
+            return
+        
+        print(f"{Fore.CYAN}Priority levels: High, Medium, Low{Style.RESET_ALL}")
+        priority = input(f"{Fore.YELLOW}Priority (default: Medium): {Style.RESET_ALL}").strip().lower()
+        
+        if not priority:
+            priority = "medium"
+        elif priority not in VALID_PRIORITIES:
+            print(f"{Fore.RED}✗ Invalid priority. Using 'medium'.{Style.RESET_ALL}")
+            priority = "medium"
+        
+        category = input(f"{Fore.YELLOW}Category (optional): {Style.RESET_ALL}").strip().lower()
+        category = category if category else None
+        
+        tags_input = input(f"{Fore.YELLOW}Tags (comma-separated, optional): {Style.RESET_ALL}").strip()
+        tags = [tag.strip().lower() for tag in tags_input.split(',') if tag.strip()] if tags_input else []
+        
+        create_template(name, title, priority, category, tags)
+    
+    elif choice == "2":
+        # List templates
+        list_templates()
+    
+    elif choice == "3":
+        # Create task from template
+        templates = list_templates()
+        
+        if not templates:
+            return
+        
+        name = input(f"{Fore.YELLOW}Enter template name: {Style.RESET_ALL}").strip()
+        template = get_template(name)
+        
+        if template:
+            task_data = create_task_from_template(template, None)
+            
+            # Parse due date if provided
+            due_date = None
+            if task_data.get("due_date"):
+                due_date_str = task_data["due_date"]
+                if due_date_str.lower() == "today":
+                    due_date = datetime.now().strftime("%Y-%m-%d")
+                elif due_date_str.lower() == "tomorrow":
+                    due_date = (datetime.now() + timedelta(days=1)).strftime("%Y-%m-%d")
+                elif due_date_str.startswith("+"):
+                    try:
+                        days = int(due_date_str[1:])
+                        due_date = (datetime.now() + timedelta(days=days)).strftime("%Y-%m-%d")
+                    except:
+                        due_date = None
+                else:
+                    try:
+                        datetime.strptime(due_date_str, "%Y-%m-%d")
+                        due_date = due_date_str
+                    except:
+                        due_date = None
+            
+            # Create the task
+            add_task(
+                task_data["title"],
+                task_data["priority"],
+                due_date,
+                task_data.get("category"),
+                task_data.get("tags", [])
+            )
+    
+    elif choice == "4":
+        # Delete template
+        templates = list_templates()
+        
+        if not templates:
+            return
+        
+        name = input(f"{Fore.YELLOW}Enter template name to delete: {Style.RESET_ALL}").strip()
+        
+        confirm = input(f"{Fore.RED}Delete template '{name}'? (yes/no): {Style.RESET_ALL}").strip().lower()
+        
+        if confirm in ['yes', 'y']:
+            delete_template(name)
+        else:
+            print(f"{Fore.CYAN}Deletion cancelled.{Style.RESET_ALL}")
+    
+    elif choice == "5":
+        # Export template
+        templates = list_templates()
+        
+        if not templates:
+            return
+        
+        name = input(f"{Fore.YELLOW}Enter template name to export: {Style.RESET_ALL}").strip()
+        filename = input(f"{Fore.YELLOW}Filename (optional, press Enter for default): {Style.RESET_ALL}").strip()
+        
+        export_template(name, filename if filename else None)
+    
+    elif choice == "6":
+        # Import template
+        filename = input(f"{Fore.YELLOW}Enter filename to import: {Style.RESET_ALL}").strip()
+        import_template(filename)
+    
+    elif choice == "7":
+        return
+    
+    else:
+        print(f"{Fore.RED}✗ Invalid choice.{Style.RESET_ALL}")
+
 def main():
     """Main function"""
     print(f"\n{Fore.MAGENTA}{Back.WHITE} === Task Manager CLI === {Style.RESET_ALL}\n")
@@ -888,8 +1030,9 @@ def main():
     print(f"{Fore.CYAN}11.{Style.RESET_ALL} Delete task")
     print(f"{Fore.CYAN}12.{Style.RESET_ALL} View statistics")
     print(f"{Fore.CYAN}13.{Style.RESET_ALL} Export to CSV")
-    print(f"{Fore.CYAN}14.{Style.RESET_ALL} Bulk operations")  # <-- NEW LINE
-    print(f"{Fore.CYAN}15.{Style.RESET_ALL} Exit")             # <-- CHANGED FROM 14
+    print(f"{Fore.CYAN}14.{Style.RESET_ALL} Bulk operations")
+    print(f"{Fore.CYAN}15.{Style.RESET_ALL} Task templates")    # <-- NEW LINE
+    print(f"{Fore.CYAN}16.{Style.RESET_ALL} Exit")              # <-- CHANGED FROM 15
     
     choice = get_valid_choice()
     
@@ -927,9 +1070,11 @@ def main():
         show_statistics()
     elif choice == "13":
         export_menu()
-    elif choice == "14":           # <-- NEW BLOCK
+    elif choice == "14":
         bulk_operations_menu()
-    elif choice == "15":           # <-- CHANGED FROM 14
+    elif choice == "15":
+        templates_menu()
+    elif choice == "16":
         print(f"{Fore.GREEN}Goodbye!{Style.RESET_ALL}")
         return
 
