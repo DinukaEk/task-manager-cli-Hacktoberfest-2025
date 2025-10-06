@@ -26,10 +26,10 @@ def get_valid_choice():
     while True:
         choice = input(f"\n{Fore.YELLOW}Enter your choice: {Style.RESET_ALL}").strip()
         
-        if choice in ['1', '2', '3', '4', '5', '6', '7', '8', '9', '10', '11']:
+        if choice in ['1', '2', '3', '4', '5', '6', '7', '8', '9', '10', '11', '12', '13']:
             return choice
         else:
-            print(f"{Fore.RED}✗ Invalid choice! Please enter a number between 1 and 11.{Style.RESET_ALL}")
+            print(f"{Fore.RED}✗ Invalid choice! Please enter a number between 1 and 13.{Style.RESET_ALL}")
 
 def get_valid_task_id(prompt="Enter task ID: "):
     """Get and validate task ID from user"""
@@ -75,6 +75,80 @@ def get_search_query():
         return None
     
     return query
+
+def get_category():
+    """Get and validate task category from user"""
+    print(f"{Fore.CYAN}Enter category (or press Enter to skip):{Style.RESET_ALL}")
+    print(f"{Fore.CYAN}Examples: work, personal, shopping, health, study{Style.RESET_ALL}")
+    
+    category = input(f"{Fore.YELLOW}Category: {Style.RESET_ALL}").strip().lower()
+    
+    if not category:
+        return None
+    
+    if len(category) > 20:
+        print(f"{Fore.YELLOW}⚠ Category name too long. Truncating to 20 characters.{Style.RESET_ALL}")
+        return category[:20]
+    
+    return category
+
+def get_tags():
+    """Get and validate tags from user"""
+    print(f"{Fore.CYAN}Enter tags separated by commas (or press Enter to skip):{Style.RESET_ALL}")
+    print(f"{Fore.CYAN}Examples: urgent, meeting, bug-fix, frontend{Style.RESET_ALL}")
+    
+    tags_input = input(f"{Fore.YELLOW}Tags: {Style.RESET_ALL}").strip()
+    
+    if not tags_input:
+        return []
+    
+    # Split by comma and clean up
+    tags = [tag.strip().lower() for tag in tags_input.split(',') if tag.strip()]
+    
+    # Limit tag length
+    tags = [tag[:15] for tag in tags]
+    
+    # Limit number of tags
+    if len(tags) > 5:
+        print(f"{Fore.YELLOW}⚠ Maximum 5 tags allowed. Using first 5.{Style.RESET_ALL}")
+        tags = tags[:5]
+    
+    return tags
+
+def get_category_color(category):
+    """Get color for category display"""
+    if not category:
+        return Fore.WHITE
+    
+    # Hash the category name to get consistent color
+    color_map = {
+        0: Fore.RED,
+        1: Fore.GREEN,
+        2: Fore.YELLOW,
+        3: Fore.BLUE,
+        4: Fore.MAGENTA,
+        5: Fore.CYAN
+    }
+    
+    hash_val = sum(ord(c) for c in category) % 6
+    return color_map[hash_val]
+
+def get_all_categories(tasks):
+    """Get list of all unique categories"""
+    categories = set()
+    for task in tasks:
+        cat = task.get("category")
+        if cat:
+            categories.add(cat)
+    return sorted(categories)
+
+def get_all_tags(tasks):
+    """Get list of all unique tags"""
+    tags = set()
+    for task in tasks:
+        task_tags = task.get("tags", [])
+        tags.update(task_tags)
+    return sorted(tags)
 
 def get_priority():
     """Get and validate task priority from user"""
@@ -260,16 +334,22 @@ def show_statistics():
     
     print(f"\n{Fore.CYAN}{'='*60}{Style.RESET_ALL}\n")
 
-def add_task(title, priority="medium", due_date=None):
-    """Add a new task with priority and due date"""
+def add_task(title, priority="medium", due_date=None, category=None, tags=None):
+    """Add a new task with priority, due date, category, and tags"""
     tasks = load_tasks()
+    
+    if tags is None:
+        tags = []
+    
     task = {
         "id": len(tasks) + 1,
         "title": title,
         "priority": priority,
         "completed": False,
         "created_at": datetime.now().isoformat(),
-        "due_date": due_date
+        "due_date": due_date,
+        "category": category,
+        "tags": tags
     }
     tasks.append(task)
     save_tasks(tasks)
@@ -280,20 +360,41 @@ def add_task(title, priority="medium", due_date=None):
         status, _ = get_due_date_status(due_date)
         due_info = f" | Due: {status}"
     
-    print(f"{Fore.GREEN}✓ Task added: {title} {priority_symbol} [{priority.upper()}]{due_info}{Style.RESET_ALL}")
+    category_info = ""
+    if category:
+        cat_color = get_category_color(category)
+        category_info = f" | {cat_color}📁 {category}{Style.RESET_ALL}"
+    
+    tags_info = ""
+    if tags:
+        tags_info = f" | 🏷️ {', '.join(tags)}"
+    
+    print(f"{Fore.GREEN}✓ Task added: {title} {priority_symbol} [{priority.upper()}]{due_info}{category_info}{tags_info}{Style.RESET_ALL}")
 
-def display_tasks(tasks, filter_type="all", header_override=None):
+def display_tasks(tasks, filter_type="all", header_override=None, filter_category=None, filter_tag=None):
     """Display tasks with optional filtering"""
     if not tasks:
         print(f"{Fore.YELLOW}No tasks found.{Style.RESET_ALL}")
         return
     
-    # Add priority field to old tasks that don't have it (backward compatibility)
+    # Add fields to old tasks that don't have them (backward compatibility)
     for task in tasks:
         if "priority" not in task:
             task["priority"] = "medium"
         if "due_date" not in task:
             task["due_date"] = None
+        if "category" not in task:
+            task["category"] = None
+        if "tags" not in task:
+            task["tags"] = []
+    
+    # Filter by category if specified
+    if filter_category:
+        tasks = [task for task in tasks if task.get("category") == filter_category]
+    
+    # Filter by tag if specified
+    if filter_tag:
+        tasks = [task for task in tasks if filter_tag in task.get("tags", [])]
     
     # Filter tasks based on filter_type
     if filter_type == "completed":
@@ -325,6 +426,8 @@ def display_tasks(tasks, filter_type="all", header_override=None):
             print(f"{Fore.YELLOW}No pending tasks found.{Style.RESET_ALL}")
         elif filter_type == "overdue":
             print(f"{Fore.GREEN}✓ No overdue tasks! Great job!{Style.RESET_ALL}")
+        else:
+            print(f"{Fore.YELLOW}No tasks found with the specified filter.{Style.RESET_ALL}")
         return
     
     # Sort tasks by priority (high -> medium -> low), then by ID
@@ -355,7 +458,18 @@ def display_tasks(tasks, filter_type="all", header_override=None):
             due_status, _ = get_due_date_status(task["due_date"])
             due_info = f" | {due_status}"
         
-        print(f"{Fore.CYAN}{task['id']}.{Style.RESET_ALL} [{status}] {title} {priority_symbol} {Fore.CYAN}[{priority.upper()}]{Style.RESET_ALL}{due_info}")
+        # Add category info
+        category_info = ""
+        if task.get("category"):
+            cat_color = get_category_color(task["category"])
+            category_info = f" | {cat_color}📁 {task['category']}{Style.RESET_ALL}"
+        
+        # Add tags info
+        tags_info = ""
+        if task.get("tags"):
+            tags_info = f" | 🏷️ {', '.join(task['tags'])}"
+        
+        print(f"{Fore.CYAN}{task['id']}.{Style.RESET_ALL} [{status}] {title} {priority_symbol} {Fore.CYAN}[{priority.upper()}]{Style.RESET_ALL}{due_info}{category_info}{tags_info}")
     print(f"{Fore.MAGENTA}{'='*70}{Style.RESET_ALL}\n")
 
 def list_tasks():
@@ -377,6 +491,59 @@ def list_overdue_tasks():
     """List only overdue tasks"""
     tasks = load_tasks()
     display_tasks(tasks, "overdue")
+
+def list_by_category():
+    """List tasks filtered by category"""
+    tasks = load_tasks()
+    
+    if not tasks:
+        print(f"{Fore.YELLOW}No tasks found.{Style.RESET_ALL}")
+        return
+    
+    categories = get_all_categories(tasks)
+    
+    if not categories:
+        print(f"{Fore.YELLOW}No categories found. Add categories to your tasks!{Style.RESET_ALL}")
+        return
+    
+    print(f"\n{Fore.CYAN}Available categories:{Style.RESET_ALL}")
+    for i, cat in enumerate(categories, 1):
+        cat_color = get_category_color(cat)
+        print(f"  {i}. {cat_color}{cat}{Style.RESET_ALL}")
+    
+    choice = input(f"\n{Fore.YELLOW}Enter category name: {Style.RESET_ALL}").strip().lower()
+    
+    if choice in categories:
+        header = f"TASKS IN CATEGORY: {choice.upper()}"
+        display_tasks(tasks, "all", header_override=header, filter_category=choice)
+    else:
+        print(f"{Fore.RED}✗ Category not found.{Style.RESET_ALL}")
+
+def list_by_tag():
+    """List tasks filtered by tag"""
+    tasks = load_tasks()
+    
+    if not tasks:
+        print(f"{Fore.YELLOW}No tasks found.{Style.RESET_ALL}")
+        return
+    
+    tags = get_all_tags(tasks)
+    
+    if not tags:
+        print(f"{Fore.YELLOW}No tags found. Add tags to your tasks!{Style.RESET_ALL}")
+        return
+    
+    print(f"\n{Fore.CYAN}Available tags:{Style.RESET_ALL}")
+    for i, tag in enumerate(tags, 1):
+        print(f"  {i}. 🏷️ {tag}")
+    
+    choice = input(f"\n{Fore.YELLOW}Enter tag name: {Style.RESET_ALL}").strip().lower()
+    
+    if choice in tags:
+        header = f"TASKS WITH TAG: {choice.upper()}"
+        display_tasks(tasks, "all", header_override=header, filter_tag=choice)
+    else:
+        print(f"{Fore.RED}✗ Tag not found.{Style.RESET_ALL}")
 
 def search_tasks():
     """Search for tasks by keyword"""
@@ -423,7 +590,7 @@ def complete_task(task_id):
     print(f"{Fore.RED}✗ Task {task_id} not found.{Style.RESET_ALL}")
 
 def edit_task(task_id):
-    """Edit a task's title, priority, and due date"""
+    """Edit a task's title, priority, due date, category, and tags"""
     tasks = load_tasks()
     
     if not tasks:
@@ -436,11 +603,16 @@ def edit_task(task_id):
             priority = task.get("priority", "medium")
             priority_symbol = get_priority_symbol(priority)
             due_date = task.get("due_date", "Not set")
+            category = task.get("category", "Not set")
+            tags = task.get("tags", [])
+            tags_display = ", ".join(tags) if tags else "None"
             
             print(f"\n{Fore.CYAN}Current task:{Style.RESET_ALL}")
             print(f"  Title: {task['title']}")
             print(f"  Priority: {priority_symbol} [{priority.upper()}]")
             print(f"  Due Date: {due_date}")
+            print(f"  Category: {category}")
+            print(f"  Tags: {tags_display}")
             print()
             
             # Get new title
@@ -491,6 +663,31 @@ def edit_task(task_id):
                         except ValueError:
                             print(f"{Fore.RED}✗ Invalid date format. Keeping current due date.{Style.RESET_ALL}")
             
+            # Get new category
+            print(f"\n{Fore.CYAN}Enter new category (or press Enter to keep current, 'none' to remove):{Style.RESET_ALL}")
+            new_category = input(f"{Fore.YELLOW}New category: {Style.RESET_ALL}").strip().lower()
+            
+            if new_category:
+                if new_category == "none":
+                    task["category"] = None
+                else:
+                    task["category"] = new_category[:20]
+            
+            # Get new tags
+            print(f"\n{Fore.CYAN}Enter new tags (comma-separated, or press Enter to keep current, 'none' to remove):{Style.RESET_ALL}")
+            new_tags_input = input(f"{Fore.YELLOW}New tags: {Style.RESET_ALL}").strip()
+            
+            if new_tags_input:
+                if new_tags_input.lower() == "none":
+                    task["tags"] = []
+                else:
+                    new_tags = [tag.strip().lower() for tag in new_tags_input.split(',') if tag.strip()]
+                    new_tags = [tag[:15] for tag in new_tags]
+                    if len(new_tags) > 5:
+                        print(f"{Fore.YELLOW}⚠ Maximum 5 tags allowed. Using first 5.{Style.RESET_ALL}")
+                        new_tags = new_tags[:5]
+                    task["tags"] = new_tags
+            
             # Add updated timestamp
             task["updated_at"] = datetime.now().isoformat()
             
@@ -500,11 +697,16 @@ def edit_task(task_id):
             updated_priority = task.get("priority", "medium")
             updated_symbol = get_priority_symbol(updated_priority)
             updated_due = task.get("due_date", "Not set")
+            updated_category = task.get("category", "Not set")
+            updated_tags = task.get("tags", [])
+            updated_tags_display = ", ".join(updated_tags) if updated_tags else "None"
             
             print(f"\n{Fore.GREEN}✓ Task {task_id} updated successfully!{Style.RESET_ALL}")
             print(f"  New title: {task['title']}")
             print(f"  New priority: {updated_symbol} [{updated_priority.upper()}]")
             print(f"  New due date: {updated_due}")
+            print(f"  New category: {updated_category}")
+            print(f"  New tags: {updated_tags_display}")
             return
     
     print(f"{Fore.RED}✗ Task {task_id} not found.{Style.RESET_ALL}")
@@ -544,12 +746,14 @@ def main():
     print(f"{Fore.CYAN}3.{Style.RESET_ALL}  List completed tasks")
     print(f"{Fore.CYAN}4.{Style.RESET_ALL}  List pending tasks")
     print(f"{Fore.CYAN}5.{Style.RESET_ALL}  List overdue tasks")
-    print(f"{Fore.CYAN}6.{Style.RESET_ALL}  Search tasks")
-    print(f"{Fore.CYAN}7.{Style.RESET_ALL}  Complete task")
-    print(f"{Fore.CYAN}8.{Style.RESET_ALL}  Edit task")
-    print(f"{Fore.CYAN}9.{Style.RESET_ALL}  Delete task")
-    print(f"{Fore.CYAN}10.{Style.RESET_ALL} View statistics")
-    print(f"{Fore.CYAN}11.{Style.RESET_ALL} Exit")
+    print(f"{Fore.CYAN}6.{Style.RESET_ALL}  List by category")
+    print(f"{Fore.CYAN}7.{Style.RESET_ALL}  List by tag")
+    print(f"{Fore.CYAN}8.{Style.RESET_ALL}  Search tasks")
+    print(f"{Fore.CYAN}9.{Style.RESET_ALL}  Complete task")
+    print(f"{Fore.CYAN}10.{Style.RESET_ALL} Edit task")
+    print(f"{Fore.CYAN}11.{Style.RESET_ALL} Delete task")
+    print(f"{Fore.CYAN}12.{Style.RESET_ALL} View statistics")
+    print(f"{Fore.CYAN}13.{Style.RESET_ALL} Exit")
     
     choice = get_valid_choice()
     
@@ -557,7 +761,9 @@ def main():
         title = get_task_title()
         priority = get_priority()
         due_date = get_due_date()
-        add_task(title, priority, due_date)
+        category = get_category()
+        tags = get_tags()
+        add_task(title, priority, due_date, category, tags)
     elif choice == "2":
         list_tasks()
     elif choice == "3":
@@ -567,19 +773,23 @@ def main():
     elif choice == "5":
         list_overdue_tasks()
     elif choice == "6":
-        search_tasks()
+        list_by_category()
     elif choice == "7":
+        list_by_tag()
+    elif choice == "8":
+        search_tasks()
+    elif choice == "9":
         task_id = get_valid_task_id("Enter task ID to complete: ")
         complete_task(task_id)
-    elif choice == "8":
+    elif choice == "10":
         task_id = get_valid_task_id("Enter task ID to edit: ")
         edit_task(task_id)
-    elif choice == "9":
+    elif choice == "11":
         task_id = get_valid_task_id("Enter task ID to delete: ")
         delete_task(task_id)
-    elif choice == "10":
+    elif choice == "12":
         show_statistics()
-    elif choice == "11":
+    elif choice == "13":
         print(f"{Fore.GREEN}Goodbye!{Style.RESET_ALL}")
         return
 
