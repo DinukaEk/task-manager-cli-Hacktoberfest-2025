@@ -3,6 +3,14 @@ import os
 from datetime import datetime, timedelta
 from colorama import Fore, Back, Style, init
 from export_utils import export_to_csv, export_filtered_to_csv
+from bulk_operations import (
+    parse_task_ids,
+    bulk_complete_tasks,
+    bulk_delete_tasks,
+    bulk_change_priority,
+    bulk_add_category,
+    bulk_add_tag
+)
 
 
 # Initialize colorama for cross-platform color support
@@ -28,10 +36,10 @@ def get_valid_choice():
     while True:
         choice = input(f"\n{Fore.YELLOW}Enter your choice: {Style.RESET_ALL}").strip()
         
-        if choice in ['1', '2', '3', '4', '5', '6', '7', '8', '9', '10', '11', '12', '13', '14']:
+        if choice in ['1', '2', '3', '4', '5', '6', '7', '8', '9', '10', '11', '12', '13', '14', '15']:
             return choice
         else:
-            print(f"{Fore.RED}✗ Invalid choice! Please enter a number between 1 and 14.{Style.RESET_ALL}")
+            print(f"{Fore.RED}✗ Invalid choice! Please enter a number between 1 and 15.{Style.RESET_ALL}")
 
 def get_valid_task_id(prompt="Enter task ID: "):
     """Get and validate task ID from user"""
@@ -769,6 +777,101 @@ def export_menu():
     else:
         print(f"{Fore.RED}✗ Invalid choice.{Style.RESET_ALL}")
 
+def bulk_operations_menu():
+    """Show bulk operations menu"""
+    tasks = load_tasks()
+    
+    if not tasks:
+        print(f"{Fore.YELLOW}No tasks available for bulk operations.{Style.RESET_ALL}")
+        return
+    
+    print(f"\n{Fore.CYAN}{'='*50}{Style.RESET_ALL}")
+    print(f"{Fore.CYAN}BULK OPERATIONS MENU{Style.RESET_ALL}")
+    print(f"{Fore.CYAN}{'='*50}{Style.RESET_ALL}")
+    print(f"{Fore.YELLOW}1.{Style.RESET_ALL} Mark multiple tasks as complete")
+    print(f"{Fore.YELLOW}2.{Style.RESET_ALL} Delete multiple tasks")
+    print(f"{Fore.YELLOW}3.{Style.RESET_ALL} Change priority for multiple tasks")
+    print(f"{Fore.YELLOW}4.{Style.RESET_ALL} Add category to multiple tasks")
+    print(f"{Fore.YELLOW}5.{Style.RESET_ALL} Add tag to multiple tasks")
+    print(f"{Fore.YELLOW}6.{Style.RESET_ALL} Cancel")
+    
+    choice = input(f"\n{Fore.YELLOW}Choose bulk operation: {Style.RESET_ALL}").strip()
+    
+    if choice == "6":
+        print(f"{Fore.CYAN}Bulk operation cancelled.{Style.RESET_ALL}")
+        return
+    
+    # Get task IDs
+    print(f"\n{Fore.CYAN}Enter task IDs:{Style.RESET_ALL}")
+    print(f"{Fore.CYAN}Examples: 1,2,3 or 1-5 or 1,3-5,7{Style.RESET_ALL}")
+    ids_input = input(f"{Fore.YELLOW}Task IDs: {Style.RESET_ALL}").strip()
+    
+    task_ids = parse_task_ids(ids_input)
+    
+    if not task_ids:
+        return
+    
+    print(f"{Fore.CYAN}Selected tasks: {', '.join(map(str, task_ids))}{Style.RESET_ALL}")
+    
+    if choice == "1":
+        # Mark as complete
+        confirm = input(f"{Fore.YELLOW}Mark {len(task_ids)} task(s) as complete? (yes/no): {Style.RESET_ALL}").strip().lower()
+        if confirm in ['yes', 'y']:
+            tasks, count = bulk_complete_tasks(tasks, task_ids)
+            if count > 0:
+                save_tasks(tasks)
+        else:
+            print(f"{Fore.CYAN}Operation cancelled.{Style.RESET_ALL}")
+    
+    elif choice == "2":
+        # Delete tasks
+        confirm = input(f"{Fore.RED}Delete {len(task_ids)} task(s)? This cannot be undone! (yes/no): {Style.RESET_ALL}").strip().lower()
+        if confirm in ['yes', 'y']:
+            tasks, count = bulk_delete_tasks(tasks, task_ids)
+            if count > 0:
+                save_tasks(tasks)
+        else:
+            print(f"{Fore.CYAN}Operation cancelled.{Style.RESET_ALL}")
+    
+    elif choice == "3":
+        # Change priority
+        print(f"\n{Fore.CYAN}Priority levels: High, Medium, Low{Style.RESET_ALL}")
+        new_priority = input(f"{Fore.YELLOW}New priority: {Style.RESET_ALL}").strip().lower()
+        
+        if new_priority in VALID_PRIORITIES:
+            tasks, count = bulk_change_priority(tasks, task_ids, new_priority)
+            if count > 0:
+                save_tasks(tasks)
+        else:
+            print(f"{Fore.RED}✗ Invalid priority!{Style.RESET_ALL}")
+    
+    elif choice == "4":
+        # Add category
+        category = input(f"{Fore.YELLOW}Category to add: {Style.RESET_ALL}").strip().lower()
+        
+        if category:
+            category = category[:20]
+            tasks, count = bulk_add_category(tasks, task_ids, category)
+            if count > 0:
+                save_tasks(tasks)
+        else:
+            print(f"{Fore.RED}✗ Category cannot be empty!{Style.RESET_ALL}")
+    
+    elif choice == "5":
+        # Add tag
+        tag = input(f"{Fore.YELLOW}Tag to add: {Style.RESET_ALL}").strip().lower()
+        
+        if tag:
+            tag = tag[:15]
+            tasks, count = bulk_add_tag(tasks, task_ids, tag)
+            if count > 0:
+                save_tasks(tasks)
+        else:
+            print(f"{Fore.RED}✗ Tag cannot be empty!{Style.RESET_ALL}")
+    
+    else:
+        print(f"{Fore.RED}✗ Invalid choice.{Style.RESET_ALL}")
+
 def main():
     """Main function"""
     print(f"\n{Fore.MAGENTA}{Back.WHITE} === Task Manager CLI === {Style.RESET_ALL}\n")
@@ -784,8 +887,9 @@ def main():
     print(f"{Fore.CYAN}10.{Style.RESET_ALL} Edit task")
     print(f"{Fore.CYAN}11.{Style.RESET_ALL} Delete task")
     print(f"{Fore.CYAN}12.{Style.RESET_ALL} View statistics")
-    print(f"{Fore.CYAN}13.{Style.RESET_ALL} Export to CSV")  # <-- NEW LINE
-    print(f"{Fore.CYAN}14.{Style.RESET_ALL} Exit")           # <-- CHANGED FROM 13
+    print(f"{Fore.CYAN}13.{Style.RESET_ALL} Export to CSV")
+    print(f"{Fore.CYAN}14.{Style.RESET_ALL} Bulk operations")  # <-- NEW LINE
+    print(f"{Fore.CYAN}15.{Style.RESET_ALL} Exit")             # <-- CHANGED FROM 14
     
     choice = get_valid_choice()
     
@@ -821,9 +925,11 @@ def main():
         delete_task(task_id)
     elif choice == "12":
         show_statistics()
-    elif choice == "13":           # <-- NEW BLOCK
+    elif choice == "13":
         export_menu()
-    elif choice == "14":           # <-- CHANGED FROM 13
+    elif choice == "14":           # <-- NEW BLOCK
+        bulk_operations_menu()
+    elif choice == "15":           # <-- CHANGED FROM 14
         print(f"{Fore.GREEN}Goodbye!{Style.RESET_ALL}")
         return
 
