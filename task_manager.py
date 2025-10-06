@@ -336,6 +336,14 @@ def show_statistics():
             print(f"   {Fore.YELLOW}⏰ Due Soon (3 days): {due_soon_count} task(s){Style.RESET_ALL}")
         print()
     
+    # Notes Statistics
+    notes_summary = get_notes_summary(tasks)
+    if notes_summary["total_notes"] > 0:
+        print(f"{Fore.MAGENTA}📝 NOTES STATISTICS{Style.RESET_ALL}")
+        print(f"   Total Notes: {Fore.CYAN}{notes_summary['total_notes']}{Style.RESET_ALL}")
+        print(f"   Tasks with Notes: {Fore.CYAN}{notes_summary['tasks_with_notes']}{Style.RESET_ALL}")
+        print(f"   Average Notes per Task: {Fore.CYAN}{notes_summary['average_notes']}{Style.RESET_ALL}\n")
+
     # Productivity Insights
     print(f"{Fore.MAGENTA}💡 PRODUCTIVITY INSIGHTS{Style.RESET_ALL}")
     
@@ -489,7 +497,13 @@ def display_tasks(tasks, filter_type="all", header_override=None, filter_categor
         if task.get("tags"):
             tags_info = f" | 🏷️ {', '.join(task['tags'])}"
         
-        print(f"{Fore.CYAN}{task['id']}.{Style.RESET_ALL} [{status}] {title} {priority_symbol} {Fore.CYAN}[{priority.upper()}]{Style.RESET_ALL}{due_info}{category_info}{tags_info}")
+        # Add note count info
+        note_count = get_note_count(task)
+        notes_info = ""
+        if note_count > 0:
+            notes_info = f" | 📝 {note_count} note{'s' if note_count != 1 else ''}"
+
+        print(f"{Fore.CYAN}{task['id']}.{Style.RESET_ALL} [{status}] {title} {priority_symbol} {Fore.CYAN}[{priority.upper()}]{Style.RESET_ALL}{due_info}{category_info}{tags_info}{notes_info}")
     print(f"{Fore.MAGENTA}{'='*70}{Style.RESET_ALL}\n")
 
 def list_tasks():
@@ -1014,6 +1028,142 @@ def templates_menu():
     else:
         print(f"{Fore.RED}✗ Invalid choice.{Style.RESET_ALL}")
 
+def notes_menu():
+    """Show notes menu and manage task notes"""
+    tasks = load_tasks()
+    
+    if not tasks:
+        print(f"{Fore.YELLOW}No tasks available.{Style.RESET_ALL}")
+        return
+    
+    # Show tasks with IDs
+    print(f"\n{Fore.CYAN}Available tasks:{Style.RESET_ALL}")
+    for task in tasks[:10]:  # Show first 10 tasks
+        note_count = get_note_count(task)
+        note_indicator = f" (📝 {note_count} notes)" if note_count > 0 else ""
+        status = "✓" if task.get("completed") else "✗"
+        print(f"  {task['id']}. [{status}] {task['title']}{note_indicator}")
+    
+    if len(tasks) > 10:
+        print(f"  ... and {len(tasks) - 10} more tasks")
+    
+    task_id = get_valid_task_id("\nEnter task ID to manage notes: ")
+    
+    # Find the task
+    selected_task = None
+    task_index = None
+    for i, task in enumerate(tasks):
+        if task["id"] == task_id:
+            selected_task = task
+            task_index = i
+            break
+    
+    if not selected_task:
+        print(f"{Fore.RED}✗ Task {task_id} not found.{Style.RESET_ALL}")
+        return
+    
+    # Notes submenu
+    while True:
+        print(f"\n{Fore.CYAN}{'='*50}{Style.RESET_ALL}")
+        print(f"{Fore.CYAN}NOTES FOR: {selected_task['title']}{Style.RESET_ALL}")
+        print(f"{Fore.CYAN}{'='*50}{Style.RESET_ALL}")
+        print(f"{Fore.YELLOW}1.{Style.RESET_ALL} View all notes")
+        print(f"{Fore.YELLOW}2.{Style.RESET_ALL} Add new note")
+        print(f"{Fore.YELLOW}3.{Style.RESET_ALL} Edit note")
+        print(f"{Fore.YELLOW}4.{Style.RESET_ALL} Delete note")
+        print(f"{Fore.YELLOW}5.{Style.RESET_ALL} Export notes to file")
+        print(f"{Fore.YELLOW}6.{Style.RESET_ALL} Back to main menu")
+        
+        choice = input(f"\n{Fore.YELLOW}Choose option: {Style.RESET_ALL}").strip()
+        
+        if choice == "1":
+            # View notes
+            view_task_notes(selected_task)
+        
+        elif choice == "2":
+            # Add note
+            print(f"\n{Fore.CYAN}Enter note (can be multiple lines, type 'END' on a new line to finish):{Style.RESET_ALL}")
+            lines = []
+            while True:
+                line = input()
+                if line.strip().upper() == "END":
+                    break
+                lines.append(line)
+            
+            note_text = "\n".join(lines).strip()
+            
+            if note_text:
+                selected_task = add_note_to_task(selected_task, note_text)
+                tasks[task_index] = selected_task
+                save_tasks(tasks)
+                print(f"{Fore.GREEN}✓ Note added successfully!{Style.RESET_ALL}")
+            else:
+                print(f"{Fore.RED}✗ Note cannot be empty.{Style.RESET_ALL}")
+        
+        elif choice == "3":
+            # Edit note
+            notes = selected_task.get("notes", [])
+            if not notes:
+                print(f"{Fore.YELLOW}No notes to edit.{Style.RESET_ALL}")
+                continue
+            
+            view_task_notes(selected_task)
+            
+            try:
+                note_id = int(input(f"{Fore.YELLOW}Enter note ID to edit: {Style.RESET_ALL}").strip())
+                print(f"\n{Fore.CYAN}Enter new note text (can be multiple lines, type 'END' to finish):{Style.RESET_ALL}")
+                lines = []
+                while True:
+                    line = input()
+                    if line.strip().upper() == "END":
+                        break
+                    lines.append(line)
+                
+                new_text = "\n".join(lines).strip()
+                
+                if new_text:
+                    selected_task = edit_note(selected_task, note_id, new_text)
+                    tasks[task_index] = selected_task
+                    save_tasks(tasks)
+                else:
+                    print(f"{Fore.RED}✗ Note text cannot be empty.{Style.RESET_ALL}")
+            except ValueError:
+                print(f"{Fore.RED}✗ Invalid note ID.{Style.RESET_ALL}")
+        
+        elif choice == "4":
+            # Delete note
+            notes = selected_task.get("notes", [])
+            if not notes:
+                print(f"{Fore.YELLOW}No notes to delete.{Style.RESET_ALL}")
+                continue
+            
+            view_task_notes(selected_task)
+            
+            try:
+                note_id = int(input(f"{Fore.YELLOW}Enter note ID to delete: {Style.RESET_ALL}").strip())
+                confirm = input(f"{Fore.RED}Delete this note? (yes/no): {Style.RESET_ALL}").strip().lower()
+                
+                if confirm in ['yes', 'y']:
+                    selected_task = delete_note(selected_task, note_id)
+                    tasks[task_index] = selected_task
+                    save_tasks(tasks)
+                else:
+                    print(f"{Fore.CYAN}Deletion cancelled.{Style.RESET_ALL}")
+            except ValueError:
+                print(f"{Fore.RED}✗ Invalid note ID.{Style.RESET_ALL}")
+        
+        elif choice == "5":
+            # Export notes
+            filename = input(f"{Fore.YELLOW}Filename (optional, press Enter for default): {Style.RESET_ALL}").strip()
+            export_notes_to_text(selected_task, filename if filename else None)
+        
+        elif choice == "6":
+            # Back to main menu
+            break
+        
+        else:
+            print(f"{Fore.RED}✗ Invalid choice.{Style.RESET_ALL}")
+
 def main():
     """Main function"""
     print(f"\n{Fore.MAGENTA}{Back.WHITE} === Task Manager CLI === {Style.RESET_ALL}\n")
@@ -1031,8 +1181,9 @@ def main():
     print(f"{Fore.CYAN}12.{Style.RESET_ALL} View statistics")
     print(f"{Fore.CYAN}13.{Style.RESET_ALL} Export to CSV")
     print(f"{Fore.CYAN}14.{Style.RESET_ALL} Bulk operations")
-    print(f"{Fore.CYAN}15.{Style.RESET_ALL} Task templates")    # <-- NEW LINE
-    print(f"{Fore.CYAN}16.{Style.RESET_ALL} Exit")              # <-- CHANGED FROM 15
+    print(f"{Fore.CYAN}15.{Style.RESET_ALL} Task templates")
+    print(f"{Fore.CYAN}16.{Style.RESET_ALL} Task notes")
+    print(f"{Fore.CYAN}17.{Style.RESET_ALL} Exit")
     
     choice = get_valid_choice()
     
@@ -1075,6 +1226,8 @@ def main():
     elif choice == "15":
         templates_menu()
     elif choice == "16":
+        notes_menu()
+    elif choice == "17":
         print(f"{Fore.GREEN}Goodbye!{Style.RESET_ALL}")
         return
 
