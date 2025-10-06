@@ -2,6 +2,8 @@ import json
 import os
 from datetime import datetime, timedelta
 from colorama import Fore, Back, Style, init
+from export_utils import export_to_csv, export_filtered_to_csv
+
 
 # Initialize colorama for cross-platform color support
 init(autoreset=True)
@@ -26,10 +28,10 @@ def get_valid_choice():
     while True:
         choice = input(f"\n{Fore.YELLOW}Enter your choice: {Style.RESET_ALL}").strip()
         
-        if choice in ['1', '2', '3', '4', '5', '6', '7', '8', '9', '10']:
+        if choice in ['1', '2', '3', '4', '5', '6', '7', '8', '9', '10', '11', '12', '13', '14']:
             return choice
         else:
-            print(f"{Fore.RED}✗ Invalid choice! Please enter a number between 1 and 10.{Style.RESET_ALL}")
+            print(f"{Fore.RED}✗ Invalid choice! Please enter a number between 1 and 14.{Style.RESET_ALL}")
 
 def get_valid_task_id(prompt="Enter task ID: "):
     """Get and validate task ID from user"""
@@ -435,6 +437,35 @@ def delete_task(task_id):
     else:
         print(f"{Fore.RED}✗ Task {task_id} not found.{Style.RESET_ALL}")
 
+def export_menu():
+    """Show export menu and handle export operations"""
+    tasks = load_tasks()
+    
+    if not tasks:
+        print(f"{Fore.YELLOW}No tasks to export.{Style.RESET_ALL}")
+        return
+    
+    print(f"\n{Fore.CYAN}{'='*50}{Style.RESET_ALL}")
+    print(f"{Fore.CYAN}EXPORT MENU{Style.RESET_ALL}")
+    print(f"{Fore.CYAN}{'='*50}{Style.RESET_ALL}")
+    print(f"{Fore.YELLOW}1.{Style.RESET_ALL} Export all tasks")
+    print(f"{Fore.YELLOW}2.{Style.RESET_ALL} Export completed tasks only")
+    print(f"{Fore.YELLOW}3.{Style.RESET_ALL} Export pending tasks only")
+    print(f"{Fore.YELLOW}4.{Style.RESET_ALL} Cancel")
+    
+    choice = input(f"\n{Fore.YELLOW}Choose export option: {Style.RESET_ALL}").strip()
+    
+    if choice == "1":
+        export_filtered_to_csv(tasks, "all")
+    elif choice == "2":
+        export_filtered_to_csv(tasks, "completed")
+    elif choice == "3":
+        export_filtered_to_csv(tasks, "pending")
+    elif choice == "4":
+        print(f"{Fore.CYAN}Export cancelled.{Style.RESET_ALL}")
+    else:
+        print(f"{Fore.RED}✗ Invalid choice.{Style.RESET_ALL}")
+
 def main():
     """Main function"""
     print(f"\n{Fore.MAGENTA}{Back.WHITE} === Task Manager CLI === {Style.RESET_ALL}\n")
@@ -443,11 +474,15 @@ def main():
     print(f"{Fore.CYAN}3.{Style.RESET_ALL}  List completed tasks")
     print(f"{Fore.CYAN}4.{Style.RESET_ALL}  List pending tasks")
     print(f"{Fore.CYAN}5.{Style.RESET_ALL}  List overdue tasks")
-    print(f"{Fore.CYAN}6.{Style.RESET_ALL}  Search tasks")
-    print(f"{Fore.CYAN}7.{Style.RESET_ALL}  Complete task")
-    print(f"{Fore.CYAN}8.{Style.RESET_ALL}  Edit task")
-    print(f"{Fore.CYAN}9.{Style.RESET_ALL}  Delete task")
-    print(f"{Fore.CYAN}10.{Style.RESET_ALL} Exit")
+    print(f"{Fore.CYAN}6.{Style.RESET_ALL}  List by category")
+    print(f"{Fore.CYAN}7.{Style.RESET_ALL}  List by tag")
+    print(f"{Fore.CYAN}8.{Style.RESET_ALL}  Search tasks")
+    print(f"{Fore.CYAN}9.{Style.RESET_ALL}  Complete task")
+    print(f"{Fore.CYAN}10.{Style.RESET_ALL} Edit task")
+    print(f"{Fore.CYAN}11.{Style.RESET_ALL} Delete task")
+    print(f"{Fore.CYAN}12.{Style.RESET_ALL} View statistics")
+    print(f"{Fore.CYAN}13.{Style.RESET_ALL} Export to CSV")  # <-- NEW LINE
+    print(f"{Fore.CYAN}14.{Style.RESET_ALL} Exit")           # <-- CHANGED FROM 13
     
     choice = get_valid_choice()
     
@@ -455,7 +490,9 @@ def main():
         title = get_task_title()
         priority = get_priority()
         due_date = get_due_date()
-        add_task(title, priority, due_date)
+        category = get_category()
+        tags = get_tags()
+        add_task(title, priority, due_date, category, tags)
     elif choice == "2":
         list_tasks()
     elif choice == "3":
@@ -465,17 +502,25 @@ def main():
     elif choice == "5":
         list_overdue_tasks()
     elif choice == "6":
-        search_tasks()
+        list_by_category()
     elif choice == "7":
+        list_by_tag()
+    elif choice == "8":
+        search_tasks()
+    elif choice == "9":
         task_id = get_valid_task_id("Enter task ID to complete: ")
         complete_task(task_id)
-    elif choice == "8":
+    elif choice == "10":
         task_id = get_valid_task_id("Enter task ID to edit: ")
         edit_task(task_id)
-    elif choice == "9":
+    elif choice == "11":
         task_id = get_valid_task_id("Enter task ID to delete: ")
         delete_task(task_id)
-    elif choice == "10":
+    elif choice == "12":
+        show_statistics()
+    elif choice == "13":           # <-- NEW BLOCK
+        export_menu()
+    elif choice == "14":           # <-- CHANGED FROM 13
         print(f"{Fore.GREEN}Goodbye!{Style.RESET_ALL}")
         return
 
